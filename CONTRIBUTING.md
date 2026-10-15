@@ -2,117 +2,60 @@
 
 Thanks for your interest in contributing to mcp-server-email.
 
-## Getting Started
+## Reference Documentation
 
-```bash
-git clone https://github.com/boutquin/mcp-server-email.git
-cd mcp-server-email
-make test
-make lint
-```
+Use these documents for their respective topics rather than maintaining copies here:
 
-**Requirements:** Go 1.24+, golangci-lint v2.11+
+- [README development guide](README.md#development): prerequisites, build and test commands, benchmarks, fuzzing, integration setup, troubleshooting, and coverage reports.
+- [Architecture](docs/ARCHITECTURE.md): package responsibilities, data flow, and design decisions.
+- [Agent instructions](AGENTS.md): agent workflow, change planning, documentation organization, ADRs, and safety rules.
+- [Lint configuration](.golangci.yml): enabled checks, formatting rules, and documented exceptions.
+- [CI workflow](.github/workflows/ci.yml): CI jobs and the Go and linter versions used for validation.
 
 ## Development Workflow
 
-1. Fork and clone the repository
-2. Create a feature branch from `main`
-3. Make your changes
-4. Run the validation triple before committing:
-   ```bash
-   go build ./...
-   go test -race -count=1 ./...
-   golangci-lint run ./...
-   ```
-5. Commit with a descriptive message (see below)
-6. Open a pull request against `main`
+1. Fork and clone the repository you intend to contribute to.
+2. Create a feature branch from `main`.
+3. Make focused changes and add or update tests for changed behavior.
+4. Before committing, run the build, unit tests with the race detector, and lint checks described in the [development guide](README.md#development). Run relevant integration or fuzz tests when the change warrants them.
+5. Commit using the convention below.
+6. Open a pull request against the target repository's `main` branch.
 
-## Testing
-
-### Unit Tests
-
-```bash
-make test
-```
-
-All tests run with the race detector (`-race`). New code should include tests — the project maintains a 2.99:1 test-to-source ratio and 91%+ coverage.
-
-### Integration Tests
-
-Integration tests require Docker (Greenmail container for real IMAP/SMTP):
-
-```bash
-make test-integration
-```
-
-This starts a Greenmail container on ports 3993 (IMAP) and 3465 (SMTP), runs tests with the `integration` build tag, and tears down the container.
-
-### Fuzz Tests
-
-Six fuzz targets run in CI for 2 minutes each. To run locally:
-
-```bash
-go test -fuzz=FuzzParseMessageID -fuzztime=30s ./internal/models/
-go test -fuzz=FuzzHtmlToText -fuzztime=30s ./internal/tools/
-```
-
-## Code Style
-
-The project uses golangci-lint v2 with `default: all` and 11 explicitly disabled linters (documented in `.golangci.yml`). Key rules that cause the most rework:
-
-| Rule | What It Wants |
-|------|---------------|
-| `wsl_v5` | Blank line before assignments preceded by other statements |
-| `funcorder` | Unexported methods after all exported methods |
-| `funlen` | Max 60 lines per function (extract helpers with `t.Helper()`) |
-| `nolintlint` | No stale `//nolint:` directives |
-| `gofmt` | Aligned struct field tags |
-
-**Run lint early** — after every few files, not at the end.
+Run lint early while developing. Document new public functions with GoDoc comments, and use `t.Helper()` for extracted test helpers.
 
 ## Commit Messages
 
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
-```
+```text
 type: short description
 
 Longer explanation if needed.
 ```
 
-Types: `feat`, `fix`, `refactor`, `test`, `chore`, `docs`, `ci`
+Types: `feat`, `fix`, `refactor`, `test`, `chore`, `docs`, `ci`.
 
 Examples:
+
 - `feat: add email_thread tool for cross-folder thread search`
 - `fix: handle nil attachment in forward handler`
 - `test: add coverage for SMTP OAuth2 retry path`
-- `docs: refresh CLAUDE.md key files table`
+- `docs: clarify integration test setup`
 
-## Architecture
+## Pull Requests
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for design decisions, data flow, and package responsibilities.
+Describe the problem, resulting behavior, and validation performed. Include known limitations and explain any checks that could not run. Use the [coverage instructions](README.md#coverage) to assess whether changed behavior is adequately tested; historical coverage percentages and test-to-source ratios are not acceptance criteria.
 
-Key patterns to understand before contributing:
-- **Interface-driven DI** — `imap.Operations` and `smtp.Operations` decouple handlers from protocol clients
-- **Connection pooling with singleflight** — IMAP Pool coalesces concurrent requests per account
-- **Composite message IDs** — `{account}:{mailbox}:{uid}` format routes all CRUD operations
-- **Retry with backoff** — shared `retry.WithRetry` with `PermanentError` short-circuit
-
-## Pull Request Checklist
-
-- [ ] Tests pass: `go test -race -count=1 ./...`
-- [ ] Lint clean: `golangci-lint run ./...`
-- [ ] New public functions have GoDoc comments
-- [ ] Coverage maintained (check `go tool cover -func=coverage.out`)
-- [ ] No sensitive data (passwords, tokens) in test fixtures
+Before requesting review, confirm that the development workflow above is complete and that fixtures contain only fake credentials and test data.
 
 ## Reporting Issues
 
-Open an issue on [GitHub](https://github.com/boutquin/mcp-server-email/issues) with:
-- Steps to reproduce
-- Expected vs actual behavior
-- Server version (`mcp-server-email --version` or `go version -m $(which mcp-server-email)`)
-- Mail provider (Gmail, Outlook, etc.) if relevant
+Open an issue in the target repository's GitHub Issues tab with:
+
+- Steps to reproduce.
+- Expected and actual behavior.
+- Server version (`go version -m /path/to/mcp-server-email`).
+- Mail provider, if relevant.
 
 ## License
 
