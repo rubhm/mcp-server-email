@@ -6,7 +6,8 @@
 - Follow existing architecture, conventions, and patterns. Prefer reusing existing functionality over introducing new abstractions or dependencies.
 - For complex tasks, create a concise plan before implementing.
 - Keep changes focused on the requested task. Avoid unrelated refactoring.
-- Run relevant tests, linting, and type checks after making changes.
+- For Go code changes, run `go build ./...`, `go test -race -count=1 ./...`, and `golangci-lint run ./...`.
+- Run relevant integration tests for changes affecting IMAP/SMTP behavior. These require Docker/Greenmail and the `integration` build tag; follow the [integration test guide](README.md#integration-tests).
 - Never claim validation succeeded unless it was actually performed.
 - Summarize changes, verification results, and unresolved issues upon completion.
 
