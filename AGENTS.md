@@ -16,6 +16,7 @@
 - Review relevant plans in `docs/planning/` before starting related work.
 - For complex or multi-step changes, create or update a concise plan in `docs/planning/` before implementing.
 - Default to one descriptive kebab-case Markdown file per change, combining the specification (what should happen) and implementation plan (how to deliver it). Split into separate specification and plan files only when the change's complexity warrants it.
+- Prefix change filenames with sequential four-digit numbers, such as `0001-short-description.md`. Use `docs/planning/README.md` to track implementation order and status; each plan must name its prerequisites. Start implementation only after those prerequisites are complete, and update the index and affected plans together when order or dependencies change.
 - Include Purpose, Scope, Expected Behavior (including relevant constraints and edge cases), Acceptance Criteria, Implementation Plan, Validation, and Status.
 - Update the plan as work progresses, recording completed steps and unresolved issues.
 - Before marking a plan complete, check its acceptance criteria against the implementation and record actual validation results and any remaining gaps. Update maintained feature documentation so proposed behavior is not mistaken for current behavior.
