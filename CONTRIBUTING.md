@@ -23,6 +23,14 @@ Use these documents for their respective topics rather than maintaining copies h
 
 Run lint early while developing. Document new public functions with GoDoc comments, and use `t.Helper()` for extracted test helpers.
 
+## Releases
+
+Pushing a `v*` tag runs the [release workflow](.github/workflows/release.yml).
+Homebrew publishing requires the `HOMEBREW_TAP_GITHUB_TOKEN` repository secret
+with write access to the tap configured in `.goreleaser.yml`. When the secret is
+unset or empty, the workflow skips Homebrew and continues with the other release
+targets.
+
 ## Commit Messages
 
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
