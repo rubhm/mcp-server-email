@@ -1,6 +1,8 @@
 # Feature roadmap and execution order
 
-These plans describe proposed work, not currently available functionality.
+Completed plans record implemented work and validation; incomplete plans describe
+proposed behavior. HTTP transport is implemented, but read-only policy and P0
+deployment remain pending.
 Start with the first ready plan. Complete its acceptance criteria and record
 actual validation evidence before starting implementation of a dependent plan.
 Investigation may inform later drafts without authorizing their implementation.
@@ -8,8 +10,8 @@ Investigation may inform later drafts without authorizing their implementation.
 | Order | Plan | Prerequisites | Status |
 |---|---|---|---|
 | 0001 | [Baseline and threat model](0001-baseline-and-threat-model.md) | None | Complete; baseline validation passed |
-| 0002 | [Authenticated HTTP transport](0002-authenticated-http-transport.md) | 0001 complete | Ready for implementation |
-| 0003 | [Read-only mail access](0003-read-only-mail-access.md) | 0002 complete | Blocked by 0002 |
+| 0002 | [Authenticated HTTP transport](0002-authenticated-http-transport.md) | 0001 complete | Complete; local validation passed |
+| 0003 | [Read-only mail access](0003-read-only-mail-access.md) | 0002 complete | Ready for implementation |
 | 0004 | [Unraid and Open WebUI deployment](0004-unraid-open-webui-deployment.md) | 0003 complete | Blocked by 0003 |
 
 Numbers establish intended implementation order; prerequisites are completion
@@ -18,9 +20,9 @@ revise the dependency instead of skipping ahead. Keep this table and plan status
 in sync. Do not renumber completed plans; record any authorized sequencing changes
 in this index and the affected plans.
 
-The unimplemented HTTP and read-only plans were reordered so transport and
-authentication can be established first. Plan 0002 uses mocks or dedicated fake
-test accounts; its completion does not authorize real-mailbox deployment.
+Transport and authentication are established before read-only enforcement.
+Plan 0002 was validated with mocks and dedicated fake accounts; its completion
+does not authorize real-mailbox deployment.
 Plan 0003 must enforce and test read-only access over that transport before 0004.
 
 ## Objective and constraints

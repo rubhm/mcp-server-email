@@ -147,6 +147,8 @@ gate; Greenmail results alone do not establish DMS behavior.
 
 ## Status
 
-Blocked by 0002. Numeric limits, configuration and reference contracts are now
-specified above; implementation and execution evidence remain pending.
+Ready for implementation; prerequisite 0002 is complete. Authenticated HTTP and
+instance context are available, but currently expose legacy operations. Numeric
+limits, configuration and reference contracts are specified above; implementation
+and execution evidence remain pending.
 Next: 0004 after completion.

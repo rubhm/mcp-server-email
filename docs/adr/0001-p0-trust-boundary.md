@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted for planned P0 implementation; not implemented. See [baseline](../planning/0001-baseline-and-threat-model.md).
+Accepted. Plan 0002 implements transport authentication and instance context.
+Read-only operation policy remains in 0003; verified deployment isolation remains
+in 0004. See [baseline](../planning/0001-baseline-and-threat-model.md).
 
 ## Context
 

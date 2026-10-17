@@ -220,6 +220,10 @@ Supported OAuth2 providers: **Gmail** (`gmail.com`, `googlemail.com`) and **Outl
 |----------|----------|---------|-------------|
 | `EMAIL_CONFIG_FILE` | Yes* | — | Path to JSON config file |
 | `EMAIL_ACCOUNTS` | Yes* | — | JSON array of account configs (inline) |
+| `EMAIL_TRANSPORT` | No | `stdio` | `stdio` or authenticated `http`; explicitly empty/unknown values fail startup |
+| `EMAIL_HTTP_ADDR` | HTTP only | `127.0.0.1:8080` | Listener host:port; use an explicit private-network address for containers |
+| `EMAIL_HTTP_TOKEN_FILE` | Yes for HTTP | — | Mounted bearer secret file, separate from mail credentials |
+| `EMAIL_HTTP_ALLOWED_HOSTS` | HTTP only | `localhost:8080,127.0.0.1:8080` | Comma-separated exact client-facing authorities including port; no wildcards |
 | `EMAIL_DEFAULT_ACCOUNT` | No | First account | Default account ID |
 | `EMAIL_IMAP_TIMEOUT_MS` | No | `30000` | IMAP operation timeout (ms) |
 | `EMAIL_SMTP_TIMEOUT_MS` | No | `30000` | SMTP operation timeout (ms) |
@@ -234,6 +238,67 @@ Supported OAuth2 providers: **Gmail** (`gmail.com`, `googlemail.com`) and **Outl
 | `LOG_FORMAT` | No | `json` | Log format: `json` or `text` |
 
 *One of `EMAIL_CONFIG_FILE` or `EMAIL_ACCOUNTS` is required.
+
+### Authenticated HTTP (test accounts only until read-only enforcement)
+
+Native Streamable HTTP is available at `/mcp`; stdio remains the default and
+ignores HTTP-only settings. **HTTP currently exposes all existing tools, including
+SMTP, mutations and filesystem attachment operations.** Use only mocks or dedicated
+fake accounts until [plan 0003](docs/planning/0003-read-only-mail-access.md) is
+implemented. Authentication does not make the current mail operations read-only.
+`EMAIL_ACCESS_MODE` is not implemented yet.
+
+Use a binary built from this checkout with
+`go build -o bin/mcp-server-email ./cmd/mcp-server-email`.
+For a local test instance, set `EMAIL_TRANSPORT=http`,
+`EMAIL_CONFIG_FILE=/path/to/test-accounts.json`, and
+`EMAIL_HTTP_TOKEN_FILE=/path/to/test-mcp-token`. Keep the default loopback listener.
+Generate the token out of band from at least 32 random bytes encoded as base64url;
+restrict its file permissions. The file may contain one trailing LF or CRLF,
+must be no larger than 4096 bytes, and must otherwise hold 32-256 printable ASCII
+bytes without whitespace. Missing/unreadable/invalid files fail startup without
+printing contents or paths. Secrets are loaded once; restart to rotate them.
+
+Use exactly one `Authorization: Bearer <token>` header on every `/mcp` request,
+including initialize, discovery, tool calls and resource access. Missing/invalid
+credentials return 401 with a Bearer challenge. Tokens in query strings are not
+accepted; endpoint query strings, encoded path aliases and trailing slashes are
+rejected. Unknown paths return 404. Host validation uses the actual Host header
+(DNS case ignored); forwarded host/user headers do not establish identity. Any
+Origin header, including empty or `null`, is rejected. No CORS is enabled.
+
+The bearer credential identifies this instance, not individual Open WebUI users.
+Configure only accounts every caller of the instance may access; use separate
+instances and tokens for different authorization groups. On a trusted private
+Docker bridge, use an explicit listener such as `0.0.0.0:8080`, permit its actual
+authority (for example `email-mcp:8080`), and avoid publishing host ports. Across
+other networks, use a certificate-verified TLS proxy and enforce private routing.
+The executable does not verify network placement or terminate TLS itself.
+
+Transport is stateless: no session ID is issued, supplied session IDs carry no
+authority, GET `/mcp` returns 405, and authenticated DELETE returns 200 without
+persistent state. HTTP tool/resource list-change notifications are disabled;
+discovery is paginated at ten entries. Unauthenticated GET `/healthz` returns
+only `{"status":"ok"}` without contacting mail servers and still enforces
+Host/Origin checks; other health methods return 405.
+
+Requests have a 1 MiB body limit, configured 16 KiB header limit, 5s header-read,
+15s request-read, 60s write/idle timeouts, and a 30s MCP context deadline including
+retries. On SIGINT/SIGTERM the process cancels requests, allows up to 5s for HTTP
+shutdown, force-closes if necessary, then closes pools using
+`EMAIL_POOL_CLOSE_TIMEOUT_MS`. Stdio also handles EOF and signals through cleanup.
+HTTP startup uses metadata-only JSON logs at info level; legacy logging settings
+remain available for stdio. HTTP transport/RPC errors are generic safe codes;
+tool failures return `upstream_error` and RPC errors use `request_failed` without
+raw details.
+
+Open WebUI v0.12.3's pinned MCP client was tested with Streamable HTTP and Bearer
+headers. Select the native MCP connection type and supply the token in Bearer/Key;
+server-side client calls must omit Origin. The automated compatibility test
+loads the tagged client with isolated environment/codec imports, uses fake
+accounts, and checks initialize, pagination, tools/resources, reconnect and
+shutdown. Full UI, DMS and network-isolation validation remains in
+[plan 0004](docs/planning/0004-unraid-open-webui-deployment.md).
 
 ### Config file permissions
 

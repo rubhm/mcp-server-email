@@ -7,7 +7,9 @@ This document explains the design decisions behind mcp-server-email — why thin
 ```
 LLM Client (Claude, Cursor, etc.)
     │
-    │  stdio (JSON-RPC)
+    │  stdio (default) or authenticated Streamable HTTP /mcp
+    ▼
+Transport boundary (transport/) — HTTP bearer + Host/Origin/size guards
     ▼
 mcp-go router
     │
@@ -40,6 +42,7 @@ Every layer adds exactly one concern. Tool handlers parse MCP arguments and form
 |---------|---------|---------------|
 | `cmd` | Entry point, signal handling | Wires everything together; no business logic |
 | `config` | Config loading, provider detection | Consumed at init time only; immutable after startup |
+| `transport` | Stdio/HTTP configuration, authentication, request limits and lifecycle | HTTP identity installed only after bearer validation; no per-user identity assumption |
 | `auth` | OAuth2 device-code flow, token storage | Tokens persisted atomically (temp file + rename) |
 | `imap` | IMAP client, pool, connector | Pool lock never held during network I/O |
 | `smtp` | SMTP client, pool | One connection per send (no persistent connections) |
@@ -52,6 +55,29 @@ Every layer adds exactly one concern. Tool handlers parse MCP arguments and form
 **Dependency direction:** `tools → imap/smtp (via Operations) → models`. No circular imports. `config` flows inward at init. `auth` is consumed by `imap` and `smtp` for OAuth2.
 
 ## Design Decisions
+
+### HTTP Boundary and Lifecycle
+
+The pinned mcp-go v0.43.2 handler runs behind application-owned routing and an
+`http.Server` with fixed limits. Authentication precedes body parsing and all MCP
+dispatch. Private context keys carry an instance principal into tools/resources;
+caller headers cannot impersonate a user. Stateless requests disable persistent
+GET streams, session authority and HTTP discovery notifications. HTTP discovery
+uses ten-entry pages; legacy stdio capabilities remain compatible.
+
+HTTP tool/resource middleware removes provider errors and panic details, and the
+non-streaming response writer scrubs library RPC error messages. HTTP logs retain
+known metadata; successful authorized mail content is returned normally. This is
+an authentication boundary, not the read-only operation policy still planned in
+0003. All existing tools are presently registered in both transports.
+
+Main owns the signal context and waits for transport shutdown before closing
+pools. HTTP cancels active request contexts, drains for five seconds, then
+force-closes connections on timeout. Stdio closes blocked input on cancellation;
+both signal and EOF returns run pool cleanup. Transport configuration is
+validated before pool/listener construction. See
+[ADR 0001](adr/0001-p0-trust-boundary.md) and the
+[configuration reference](../README.md#authenticated-http-test-accounts-only-until-read-only-enforcement).
 
 ### Why Interface-Driven DI
 

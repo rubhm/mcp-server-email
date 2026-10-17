@@ -31,7 +31,7 @@ cancel requests and close pools predictably. Keep stdout protocol-safe in stdio.
 
 ## Transport contract selected by 0001
 
-Proposed behavior; 0001 is complete and implementation may begin. Use pinned
+Implemented after 0001 completion. Uses pinned
 mcp-go v0.43.2's `NewStreamableHTTPServer` as a handler on an owned `http.Server`,
 with `WithStateLess(true)` and `WithDisableStreaming(true)`. Register exactly
 `/mcp`, no redirect/trailing-slash aliases. Endpoint path is fixed for P0.
@@ -85,30 +85,76 @@ Source-level support is recorded in 0001; actual client execution remains a gate
 
 ## Acceptance Criteria
 
-- [ ] Configuration and legacy stdio behavior are explicit and covered by startup tests.
-- [ ] Missing/invalid credentials cannot initialize, call tools, list accounts, or access resources; valid requests carry the authenticated context required by 0003.
-- [ ] Session, origin/host, request-limit, and spoofed-identity cases have tests aligned with the selected library mode.
-- [ ] Health output is minimal; logs/errors redact tokens and email content.
-- [ ] Native Streamable HTTP handshake and relevant request methods are tested with the selected library; stdio regression tests pass.
-- [ ] Graceful shutdown and invalid startup configuration are tested.
-- [ ] Required checks and maintained documentation reflect the implemented transport.
+- [x] Configuration and legacy stdio behavior are explicit and covered by startup tests.
+- [x] Missing/invalid credentials cannot initialize, call tools, list accounts, or access resources; valid requests carry the authenticated context required by 0003.
+- [x] Session, origin/host, request-limit, and spoofed-identity cases have tests aligned with the selected library mode.
+- [x] Health output is minimal; logs/errors redact tokens and email content.
+- [x] Native Streamable HTTP handshake and relevant request methods are tested with the selected library; stdio regression tests pass.
+- [x] Graceful shutdown and invalid startup configuration are tested.
+- [x] Required checks and maintained documentation reflect the implemented transport.
 
 ## Implementation Plan
 
-1. Confirm 0001 is complete; finalize transport contracts and testable error cases.
-2. Add transport/startup/authentication tests before or alongside implementation.
-3. Wire library-supported HTTP serving, authentication, authenticated context propagation, and shutdown.
-4. Exercise protocol requests and stdio regression checks; update configuration and architecture documentation.
-5. Record acceptance evidence before unblocking 0003. Document the pending read-only restriction and do not deploy to real mailboxes as part of this plan.
+1. Confirmed 0001 completion and pinned library APIs before implementation.
+2. Added configuration, authentication-before-dispatch, protocol, limit, isolation,
+   error/log canary, deadline, shutdown and executable startup/stdio tests.
+3. Implemented `internal/transport` and wired main to validated startup, an owned
+   signal context, stateless HTTP serving, bounded shutdown and deferred pool close.
+4. Tested native Go and pinned Open WebUI clients; updated README and architecture.
+5. Recorded evidence below and reviewed every acceptance criterion. 0003 is ready;
+   no production mailbox deployment or read-only enforcement occurred in this plan.
 
 ## Validation
 
-Not run. Required Go checks, HTTP protocol tests, and applicable integration tests
-are pending. Open WebUI/DMS environment validation is a separate 0004 release gate.
+Executed 2026-10-17 against the working tree based on
+`3b407e43ac3803553688fbce9e4826c2c40e8c8f`. No new-change CI result is claimed.
+Linux/amd64 validation used Docker Desktop with Go 1.24.13/GCC 12 and source
+mounted read-only for tests, UID/GID 10001:10001. Cache and Git mount handling
+follow [0001's container reproduction](0001-baseline-and-threat-model.md#container-reproduction).
+
+| Check | Actual result |
+|---|---|
+| `go build ./...` | Passed. |
+| `go test -race -count=1 ./...` | Passed across entrypoint and all ten internal packages, including transport. |
+| `golangci-lint run ./...` | Passed, v2.11.3, `0 issues.` |
+| `go test -tags=integration -race -count=1 ./...` | Passed against Greenmail 2.1.0 on a dedicated private bridge; explicit fake-account test variables supplied, no host ports. IMAP 13.810s, SMTP 2.281s. |
+| Native mcp-go v0.43.2 client | Passed initialize, multi-page discovery (including terminal empty page), calls, resources, principal propagation and provider-error redaction in transport tests. |
+| Executable stdio regression | Passed initialize, tool discovery/account call, status resource and signal shutdown; invalid startup fails without protocol stdout or secret-path disclosure. HTTP-only variables do not affect default stdio. |
+| Open WebUI client | `scripts/test-openwebui-client.py` passed against a built executable with only a fake configured account and temporary random bearer secret. Python 3.12, mcp 1.27.2, httpx 0.28.1; tagged v0.12.3 client SHA256 `3969ca30bd5a4a3a674a6582d5120790efe0824d5fbdcad1ee71c273aa3ec5eb`. |
+| Documentation | Local file links, required plan sections and completed acceptance checklist passed; `git diff --check` passed. |
+
+The Python harness imports the actual checksum-verified client module; it supplies
+only environment constants and a JSON codec import, rather than starting the
+entire WebUI application. It verifies all 22 tools over ten-entry pages, account
+call, resources, missing/wrong authentication, GET 405, stateless DELETE 200,
+reconnect, clean SIGTERM exit, empty HTTP stdout and log canaries. This establishes
+client-module protocol compatibility, not full UI authorization, model behavior,
+TLS routing or deployment isolation. Those remain 0004 acceptance gates.
+
+To reproduce the client check, build `bin/http-client-server` from
+`./cmd/mcp-server-email`, install `mcp==1.27.2 httpx==0.28.1` into an isolated
+Python 3.12 environment, then run:
+
+```sh
+python scripts/test-openwebui-client.py --server-binary bin/http-client-server
+```
+
+The harness downloads only the tagged client source, checks its checksum, and
+creates/removes its own temporary fake configuration and secret. The new CI job
+runs the same check; its execution is pending the next push. Existing unit/fuzz
+and Greenmail jobs are retained. No dependency versions were changed in go.mod.
+
+HTTP uses metadata-only JSON info logs; stdio retains existing log configuration.
+Library diagnostic output is discarded rather than logging arbitrary request
+data. Middleware redacts HTTP tool/resource errors and panics, and the buffered
+non-streaming response scrubs RPC error details. Successful authorized mail
+content remains visible. Response-size/body-fetch bounds remain work for 0003;
+this plan enforces the request boundary only.
 
 ## Status
 
-Ready for implementation; prerequisite 0001 is complete. Configuration/library/
-client contracts are recorded above. HTTP implementation and client handshake
-evidence remain pending; baseline checks do not establish transport behavior.
-Next: 0003 after completion. Transport completion alone is not P0 readiness.
+Complete. Prerequisite 0001 is complete. Acceptance criteria are satisfied by the
+implementation, tests, local validation and maintained documentation above.
+Next: 0003, enforcing read-only mail access. HTTP currently registers legacy
+mutating/export/SMTP tools; use mocks or dedicated fake accounts only. P0 is not
+deployable until 0003 and 0004 also complete.

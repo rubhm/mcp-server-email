@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"log"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
 	"strconv"
@@ -17,6 +18,7 @@ import (
 	"github.com/boutquin/mcp-server-email/internal/resources"
 	"github.com/boutquin/mcp-server-email/internal/smtp"
 	"github.com/boutquin/mcp-server-email/internal/tools"
+	"github.com/boutquin/mcp-server-email/internal/transport"
 	"github.com/mark3labs/mcp-go/server"
 )
 
@@ -24,6 +26,11 @@ import (
 //
 //	-X main.version={{.Version}}
 var version = "dev"
+
+var (
+	errEmailConfig  = errors.New("invalid email configuration")
+	errHTTPListener = errors.New("HTTP listener unavailable")
+)
 
 func main() {
 	// Wire build-time version into the status resource.
@@ -35,72 +42,96 @@ func main() {
 	logger := applog.Init(os.Stderr)
 	slog.SetDefault(logger)
 
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+
+	err := run(ctx)
+	if err != nil {
+		stop()
+		logger.Error("server stopped", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	stop()
+}
+
+func run(ctx context.Context) error {
+	transportCfg, err := transport.LoadConfigFromEnv()
+	if err != nil {
+		return fmt.Errorf("transport configuration: %w", err)
+	}
+
+	if transportCfg.Mode == transport.HTTP {
+		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
+			ReplaceAttr: transport.RedactLogAttribute,
+		})))
+	}
+
 	cfg, err := config.LoadFromEnv()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "fatal: %v\n", err)
-		os.Exit(1)
+		return errEmailConfig
 	}
 
 	// Create connection pools
 	imapPool := imap.NewPool(cfg)
 	smtpPool := smtp.NewPool(cfg)
 
-	// Create MCP server with tools and resources.
-	s := newServer(cfg, imapPool, smtpPool)
-
-	// Serve over stdio — MCP framework uses standard log.Logger for error reporting.
-	stdLogger := log.New(os.Stderr, "[mcp-email] ", log.LstdFlags)
-
-	// Signal handling for graceful shutdown
-	_, cancel := context.WithCancel(context.Background())
-
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		sig := <-sigCh
-
-		logger.Info("shutting down", slog.String("signal", sig.String()))
-
-		cancel()
-
-		shutdownTimeout := time.Duration(cfg.PoolCloseTimeoutMS) * time.Millisecond
-
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
-		defer shutdownCancel()
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx),
+			time.Duration(cfg.PoolCloseTimeoutMS)*time.Millisecond)
+		defer cancel()
 
 		imapPool.Close(shutdownCtx)
 		smtpPool.Close()
-
-		os.Exit(0)
 	}()
 
-	err = server.ServeStdio(s, server.WithErrorLogger(stdLogger))
+	// Create MCP server with tools and resources.
+	s := newServer(cfg, imapPool, smtpPool, transportCfg.Mode)
 
-	cancel()
+	if transportCfg.Mode == transport.Stdio {
+		err = transport.ServeStdio(ctx, s, os.Stdin, os.Stdout)
+		if err != nil {
+			return fmt.Errorf("stdio: %w", err)
+		}
 
-	if err != nil {
-		logger.Error("server error", slog.String("error", err.Error()))
-		os.Exit(1)
+		return nil
 	}
+
+	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", transportCfg.Address)
+	if err != nil {
+		return errHTTPListener
+	}
+
+	err = transport.ServeHTTP(ctx, transport.NewHTTPServer(transportCfg, s), listener)
+	if err != nil {
+		return fmt.Errorf("HTTP: %w", err)
+	}
+
+	return nil
 }
 
 // newServer creates the MCP server with all tools and resources registered.
-func newServer(cfg *config.Config, imapPool *imap.Pool, smtpPool *smtp.Pool) *server.MCPServer {
-	s := server.NewMCPServer(
-		"mcp-server-email",
-		resources.Version,
-		server.WithToolCapabilities(true),
-		server.WithResourceCapabilities(false, true),
+func newServer(cfg *config.Config, imapPool *imap.Pool, smtpPool *smtp.Pool, mode string) *server.MCPServer {
+	options := []server.ServerOption{
+		server.WithToolCapabilities(mode == transport.Stdio),
+		server.WithResourceCapabilities(false, mode == transport.Stdio),
 		server.WithRecovery(),
+		server.WithToolHandlerMiddleware(transport.SafeToolErrors),
+		server.WithResourceHandlerMiddleware(transport.SafeResourceErrors),
 		server.WithInstructions(
-			"Email MCP server for IMAP/SMTP access. Supports multiple accounts, "+
-				"full CRUD operations (read, send, move, delete, flag), folder management, and drafts. "+
-				"Use email_accounts to list configured accounts. "+
-				"Rate limit: "+strconv.Itoa(cfg.IMAPRateLimitRPM)+" IMAP req/min, "+
-				strconv.Itoa(cfg.SMTPRateLimitRPH)+" SMTP sends/hour per account.",
+			"Email MCP server for IMAP/SMTP access. Supports multiple accounts, " +
+				"full CRUD operations (read, send, move, delete, flag), folder management, and drafts. " +
+				"Use email_accounts to list configured accounts. " +
+				"Rate limit: " + strconv.Itoa(cfg.IMAPRateLimitRPM) + " IMAP req/min, " +
+				strconv.Itoa(cfg.SMTPRateLimitRPH) + " SMTP sends/hour per account.",
 		),
-	)
+	}
+	if mode == transport.HTTP {
+		const discoveryPageSize = 10
+
+		options = append(options, server.WithPaginationLimit(discoveryPageSize))
+	}
+
+	s := server.NewMCPServer("mcp-server-email", resources.Version, options...)
 
 	tools.RegisterAll(s, imapPool, smtpPool, tools.LimitsFromConfig(cfg))
 	s.AddResource(resources.StatusResource(), resources.StatusHandler(cfg, imapPool))
