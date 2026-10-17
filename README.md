@@ -94,7 +94,7 @@ Available for: Linux (amd64, arm64), macOS (amd64, arm64), Windows (amd64, arm64
 ```bash
 docker run --rm \
   -e EMAIL_ACCOUNTS='[{"id":"main","email":"user@example.com","imap_host":"mail.example.com","imap_port":993,"smtp_host":"mail.example.com","smtp_port":465,"username":"user@example.com","password":"app-password"}]' \
-  ghcr.io/boutquin/mcp-server-email:latest
+  ghcr.io/rubhm/mcp-server-email:latest
 ```
 
 ### MCP Bundle (Claude Desktop)

@@ -28,7 +28,7 @@ checksum:
 
 dockers:
   - image_templates:
-      - "ghcr.io/boutquin/mcp-server-email:v{{ .Version }}-amd64"
+      - "ghcr.io/rubhm/mcp-server-email:v{{ .Version }}-amd64"
     use: buildx
     goarch: amd64
     dockerfile: Dockerfile.goreleaser
@@ -36,10 +36,10 @@ dockers:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--label=org.opencontainers.image.source=https://github.com/boutquin/mcp-server-email"
-      - "--label=io.modelcontextprotocol.server.name=io.github.boutquin/email"
+      - "--label=org.opencontainers.image.source=https://github.com/rubhm/mcp-server-email"
+      - "--label=io.modelcontextprotocol.server.name=io.github.rubhm/email"
   - image_templates:
-      - "ghcr.io/boutquin/mcp-server-email:v{{ .Version }}-arm64"
+      - "ghcr.io/rubhm/mcp-server-email:v{{ .Version }}-arm64"
     use: buildx
     goarch: arm64
     dockerfile: Dockerfile.goreleaser
@@ -47,18 +47,18 @@ dockers:
       - "--platform=linux/arm64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--label=org.opencontainers.image.source=https://github.com/boutquin/mcp-server-email"
-      - "--label=io.modelcontextprotocol.server.name=io.github.boutquin/email"
+      - "--label=org.opencontainers.image.source=https://github.com/rubhm/mcp-server-email"
+      - "--label=io.modelcontextprotocol.server.name=io.github.rubhm/email"
 
 docker_manifests:
-  - name_template: "ghcr.io/boutquin/mcp-server-email:v{{ .Version }}"
+  - name_template: "ghcr.io/rubhm/mcp-server-email:v{{ .Version }}"
     image_templates:
-      - "ghcr.io/boutquin/mcp-server-email:v{{ .Version }}-amd64"
-      - "ghcr.io/boutquin/mcp-server-email:v{{ .Version }}-arm64"
-  - name_template: "ghcr.io/boutquin/mcp-server-email:latest"
+      - "ghcr.io/rubhm/mcp-server-email:v{{ .Version }}-amd64"
+      - "ghcr.io/rubhm/mcp-server-email:v{{ .Version }}-arm64"
+  - name_template: "ghcr.io/rubhm/mcp-server-email:latest"
     image_templates:
-      - "ghcr.io/boutquin/mcp-server-email:v{{ .Version }}-amd64"
-      - "ghcr.io/boutquin/mcp-server-email:v{{ .Version }}-arm64"
+      - "ghcr.io/rubhm/mcp-server-email:v{{ .Version }}-amd64"
+      - "ghcr.io/rubhm/mcp-server-email:v{{ .Version }}-arm64"
 
 brews:
   - name: mcp-server-email
