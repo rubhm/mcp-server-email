@@ -92,10 +92,21 @@ Available for: Linux (amd64, arm64), macOS (amd64, arm64), Windows (amd64, arm64
 ### Docker
 
 ```bash
-docker run --rm \
+docker run --rm -i \
   -e EMAIL_ACCOUNTS='[{"id":"main","email":"user@example.com","imap_host":"mail.example.com","imap_port":993,"smtp_host":"mail.example.com","smtp_port":465,"username":"user@example.com","password":"app-password"}]' \
   ghcr.io/rubhm/mcp-server-email:latest
 ```
+
+The default transport is stdio: `-i` keeps protocol input open. Without it, a
+configured container exits successfully at EOF, often with no logs. An MCP client
+normally launches and communicates with this container; it is not an HTTP service
+by default. Missing account configuration instead exits with an error.
+
+For a continuously running HTTP test container, configure `EMAIL_TRANSPORT=http`,
+`EMAIL_HTTP_ADDR=0.0.0.0:8080`, a mounted `EMAIL_HTTP_TOKEN_FILE`, and the exact
+client authority in `EMAIL_HTTP_ALLOWED_HOSTS`, as described in
+[authenticated HTTP](#authenticated-http-test-accounts-only-until-read-only-enforcement).
+Use dedicated fake accounts until read-only enforcement is implemented.
 
 ### MCP Bundle (Claude Desktop)
 
