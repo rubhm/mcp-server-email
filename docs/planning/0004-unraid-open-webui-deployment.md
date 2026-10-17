@@ -13,7 +13,8 @@ Use dedicated DMS test accounts; no production mailbox onboarding in this plan.
 
 ## Expected Behavior
 
-Build on the completed [0003 transport](0003-authenticated-http-transport.md).
+Build on the completed [0002 transport](0002-authenticated-http-transport.md)
+and [0003 read-only policy](0003-read-only-mail-access.md).
 Run unprivileged with minimal capabilities, no unnecessary host port exposure,
 and controlled persistent paths for configuration and any required writable
 state. Use read-only root filesystem where compatible; specify exceptions.

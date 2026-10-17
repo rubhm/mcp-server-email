@@ -8,8 +8,8 @@ Investigation may inform later drafts without authorizing their implementation.
 | Order | Plan | Prerequisites | Status |
 |---|---|---|---|
 | 0001 | [Baseline and threat model](0001-baseline-and-threat-model.md) | None | Ready for investigation |
-| 0002 | [Read-only mail access](0002-read-only-mail-access.md) | 0001 complete | Blocked by 0001 |
-| 0003 | [Authenticated HTTP transport](0003-authenticated-http-transport.md) | 0002 complete | Blocked by 0002 |
+| 0002 | [Authenticated HTTP transport](0002-authenticated-http-transport.md) | 0001 complete | Blocked by 0001 |
+| 0003 | [Read-only mail access](0003-read-only-mail-access.md) | 0002 complete | Blocked by 0002 |
 | 0004 | [Unraid and Open WebUI deployment](0004-unraid-open-webui-deployment.md) | 0003 complete | Blocked by 0003 |
 
 Numbers establish intended implementation order; prerequisites are completion
@@ -17,6 +17,11 @@ gates, not suggestions. If an earlier plan is blocked, resolve or explicitly
 revise the dependency instead of skipping ahead. Keep this table and plan statuses
 in sync. Do not renumber completed plans; record any authorized sequencing changes
 in this index and the affected plans.
+
+The unimplemented HTTP and read-only plans were reordered so transport and
+authentication can be established first. Plan 0002 uses mocks or dedicated fake
+test accounts; its completion does not authorize real-mailbox deployment.
+Plan 0003 must enforce and test read-only access over that transport before 0004.
 
 ## Objective and constraints
 
