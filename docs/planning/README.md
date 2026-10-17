@@ -7,8 +7,8 @@ Investigation may inform later drafts without authorizing their implementation.
 
 | Order | Plan | Prerequisites | Status |
 |---|---|---|---|
-| 0001 | [Baseline and threat model](0001-baseline-and-threat-model.md) | None | Ready for investigation |
-| 0002 | [Authenticated HTTP transport](0002-authenticated-http-transport.md) | 0001 complete | Blocked by 0001 |
+| 0001 | [Baseline and threat model](0001-baseline-and-threat-model.md) | None | Complete; baseline validation passed |
+| 0002 | [Authenticated HTTP transport](0002-authenticated-http-transport.md) | 0001 complete | Ready for implementation |
 | 0003 | [Read-only mail access](0003-read-only-mail-access.md) | 0002 complete | Blocked by 0002 |
 | 0004 | [Unraid and Open WebUI deployment](0004-unraid-open-webui-deployment.md) | 0003 complete | Blocked by 0003 |
 
