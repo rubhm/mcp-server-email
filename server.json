@@ -4,7 +4,7 @@
   "title": "Email (IMAP/SMTP)",
   "description": "Multi-account IMAP/SMTP email server with 22 tools for reading, sending, searching, and organizing.",
   "repository": { "url": "https://github.com/rubhm/mcp-server-email", "source": "github" },
-  "version": "1.0.1",
+  "version": "1.1.0",
   "packages": [{
     "registryType": "oci",
     "identifier": "ghcr.io/rubhm/mcp-server-email:latest",

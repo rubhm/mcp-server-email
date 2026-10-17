@@ -1,7 +1,7 @@
 {
   "$schema": "https://mcpbundles.com/schema/manifest.json",
   "name": "mcp-server-email",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Multi-account IMAP/SMTP email server with 22 MCP tools",
   "author": "boutquin",
   "license": "MIT",
